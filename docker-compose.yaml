@@ -4,7 +4,7 @@ services:
   app:
     build: .
     ports:
-        - "80:5000"
+        - "5000:5000"
     volumes:
         - .:/code
     environment:
@@ -12,8 +12,18 @@ services:
       - DD_ENV=dev
       - DD_VERSION=0.1
       - DD_AGENT_HOST=datadog-agent
-      - FLASK_DEBUG=${FLASK_DEBUG}
-      - FLASK_ENV=${FLASK_ENV}
+      - FLASK_DEBUG=False
+    depends_on:
+      - datadog-agent
+    stdin_open: true
+    tty: true
+    command:
+      - pipenv
+      - run
+      - ddtrace-run
+      - gunicorn
+      - --bind=0.0.0.0:5000
+      - app:app
 
   datadog-agent:
     image: gcr.io/datadoghq/agent:latest

@@ -6,4 +6,4 @@ gunicorn = {version = ">=19.7.1,<20",index = "pypi"}
 [dev-packages]
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"

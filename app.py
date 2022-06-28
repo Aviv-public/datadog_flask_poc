@@ -1,14 +1,10 @@
-import os
-from flask import Flask, abort, jsonify, current_app
+import logging
 
+from flask import Flask, jsonify, current_app
 
-class Config:
-    DEBUG = os.environ.get('FLASK_DEBUG', False)
-    ENV = os.environ.get('FLASK_ENV', "dev")
-
+logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
-app.config.from_object(Config)
 
 
 @app.route("/")
