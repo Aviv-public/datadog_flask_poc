@@ -17,11 +17,6 @@ def hello():
     return jsonify(config_json)
 
 
-@app.route("/abort")
-def flask_abort():
-    abort("abort message")
-
-
 @app.route("/raise")
 def raise_exception():
     raise Exception("Exception message")
