@@ -4,7 +4,6 @@ WORKDIR /code
 ENV PYTHONPATH /code
 
 RUN pip install pipenv
-RUN pipenv lock
 RUN pipenv install
 
 ENTRYPOINT ["pipenv"]
