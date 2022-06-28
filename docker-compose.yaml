@@ -1,0 +1,26 @@
+version: '3.4'
+
+services:
+  app:
+    build: .
+    ports:
+        - "80:5000"
+    volumes:
+        - .:/code
+    environment:
+      - DD_SERVICE=testapi
+      - DD_ENV=dev
+      - DD_VERSION=0.1
+      - DD_AGENT_HOST=datadog-agent
+      - FLASK_DEBUG=${FLASK_DEBUG}
+      - FLASK_ENV=${FLASK_ENV}
+
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:latest
+    ports:
+      - 8126:8126
+    environment:
+      - DD_API_KEY=${DD_API_KEY}
+      - DD_APM_ENABLED=true
+      - DD_SITE=datadoghq.eu
+      - DD_ENV="dev"
