@@ -8,11 +8,14 @@ services:
     volumes:
         - .:/code
     environment:
-      - DD_SERVICE=testapi
-      - DD_ENV=dev
-      - DD_VERSION=0.1
+      - DD_SERVICE=${APP_NAME}
+      - DD_ENV=${ENV}
+      - DD_VERSION=${APP_VERSION}
       - DD_AGENT_HOST=datadog-agent
-      - FLASK_DEBUG=False
+      - DD_APM_ENABLED=${DD_APM_ENABLED}
+      - DD_TRACE_ENABLED=${DD_TRACE_ENABLED}
+      - FLASK_ENV=${FLASK_ENV}
+      - FLASK_DEBUG=${FLASK_DEBUG}
     depends_on:
       - datadog-agent
     stdin_open: true
@@ -22,15 +25,23 @@ services:
       - run
       - ddtrace-run
       - gunicorn
+      - --name="testapi"
+      - --statsd-host=datadog-agent:8125
       - --bind=0.0.0.0:5000
       - app:app
 
   datadog-agent:
     image: gcr.io/datadoghq/agent:latest
     ports:
-      - 8126:8126
+      - "8126:8126"
+      - "8125:8125"
     environment:
+      # - DD_SERVICE=${APP_NAME}
+      - DD_ENV=${ENV}
+      # - DD_VERSION=${APP_VERSION}
       - DD_API_KEY=${DD_API_KEY}
-      - DD_APM_ENABLED=true
       - DD_SITE=datadoghq.eu
-      - DD_ENV="dev"
+      - DD_APM_ENABLED=${DD_APM_ENABLED}
+      # - DD_TRACE_ENABLED=${DD_TRACE_ENABLED}
+      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=${DD_DOGSTATSD_NON_LOCAL_TRAFFIC}
+      - DD_DOGSTATSD_ORIGIN_DETECTION=${DD_DOGSTATSD_ORIGIN_DETECTION}
