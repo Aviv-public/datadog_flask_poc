@@ -1,11 +1,43 @@
 # DATADOG Flask poc
 
+# Features
+- APM enabled
+- Logging enabled
+
+# TODO
+- When Flask is not in debug mode, errors are not reported in Error Tracking (Datadog support ticket in progress)
+- StatsD Metrics:
+  - type "set" set value to 1 (instead of metric)
+  - Historgam type
+- Logging
+  - Application logs
+    - [x]send application logs with request info
+  - Container logs & stacktrace
+    - [x] send containter logs
+    - :error: all logs are reported as info
+    - :error: stacktraces are not grouped 
+
+# Run application
+
 ```bash
 $ DD_API_KEY=xxx docker-compose up
 ```
 
-# Endpoints
-## Generate HTTP 500 Error
+# Generate traffic on Application
+## Automatic (Locust)
+A locust service is automatically started on launch to generate traffic on application.
+
+View/Monitor locust run at http://localhost:8089/
+
+Disable service, comment the locust services in docker compose file.
+
+## Manual
+### Default endoint
+```bash
+$ curl http://localhost:5000/
+```
+
+### Generate HTTP 500 Error
 ```bash
 $ curl http://localhost:5000/raise
 ```
@@ -18,7 +50,7 @@ $ curl http://localhost:5000/raise
 <p>The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.</p>
 ```
 
-## Metrics
+### Custom statsd Metrics
 ```bash
 # increment metric test_metric.increment
 $ curl http://localhost:5000/sdmetrics_incr/3
@@ -30,7 +62,24 @@ $ curl http://localhost:5000/sdmetrics_gauge/45
 $ curl http://localhost:5000/sdmetrics_set/78
 ```
 
-# Locust
-Using locust you can call all endpoints in batch to simulate traffic on api.
+### Logging
+```bash
+# generate a debug log
+$ curl http://localhost:5000/logging/debug
+# generate a info log
+$ curl http://localhost:5000/logging/info
+# generate a warning log
+$ curl http://localhost:5000/logging/warning
+# generate a error log
+$ curl http://localhost:5000/logging/error
+# generate a critical log
+$ curl http://localhost:5000/logging/critical
+```
+> View logs in https://app.datadoghq.eu/logs/livetail
 
-Start locust batch automatically, uncomment locust and locust-worker in docker-compose file.
+# Datadog DashBoard
+## Create a datadog dashboard
+
+```json
+{"title":"MA - TestAPI","description":"## Title\n\nDescribe this dashboard. Add links to other dashboards, monitors, wikis,  and docs to help your teammates. Markdown is supported.\n\n- [This might link to a dashboard](#)\n- [This might link to a wiki](#)","widgets":[{"id":2404946736844091,"definition":{"title":"All Requests by Endpoint","title_size":"16","title_align":"left","show_legend":true,"legend_layout":"horizontal","legend_columns":["avg","min","max","value","sum"],"type":"timeseries","requests":[{"formulas":[{"formula":"query1"}],"response_format":"timeseries","queries":[{"query":"sum:trace.flask.request.hits{service:testapi,env:$env.value} by {resource_name}.as_count()","data_source":"metrics","name":"query1"}],"style":{"palette":"dog_classic","line_type":"solid","line_width":"normal"},"display_type":"line"}]},"layout":{"x":0,"y":0,"width":5,"height":3}},{"id":7174504803456351,"definition":{"title":"All Requests Duration by Endpoint","title_size":"16","title_align":"left","type":"toplist","requests":[{"formulas":[{"formula":"query1","limit":{"count":500,"order":"desc"}}],"response_format":"scalar","queries":[{"query":"sum:trace.flask.request.duration{env:$env.value,service:$service.value} by {resource_name}","data_source":"metrics","name":"query1","aggregator":"avg"}]}]},"layout":{"x":5,"y":0,"width":5,"height":3}},{"id":6639707856466071,"definition":{"title":"All Requests by Endpoint 2XX","title_size":"16","title_align":"left","show_legend":true,"legend_layout":"horizontal","legend_columns":["avg","min","max","value","sum"],"type":"timeseries","requests":[{"formulas":[{"formula":"query1"}],"response_format":"timeseries","queries":[{"query":"sum:trace.flask.request.hits{env:$env.value,service:$service.value,http.status_code:2*} by {resource_name,http.status_code}.as_count()","data_source":"metrics","name":"query1"}],"style":{"palette":"dog_classic","line_type":"solid","line_width":"normal"},"display_type":"line"}]},"layout":{"x":0,"y":3,"width":5,"height":3}},{"id":1511961027831519,"definition":{"title":"All Requests by Endpoint != 2XX","title_size":"16","title_align":"left","show_legend":true,"legend_layout":"horizontal","legend_columns":["avg","min","max","value","sum"],"type":"timeseries","requests":[{"formulas":[{"formula":"query1"}],"response_format":"timeseries","queries":[{"query":"sum:trace.flask.request.hits{env:$env.value,service:$service.value,!http.status_code:2*} by {resource_name,http.status_code}.as_count()","data_source":"metrics","name":"query1"}],"style":{"palette":"dog_classic","line_type":"solid","line_width":"normal"},"display_type":"line"}]},"layout":{"x":5,"y":3,"width":5,"height":3}},{"id":1759063507568562,"definition":{"title":"Custom StatsD metrics","title_size":"16","title_align":"left","show_legend":false,"legend_layout":"auto","legend_columns":["avg","min","max","value","sum"],"time":{"live_span":"15m"},"type":"timeseries","requests":[{"formulas":[{"formula":"query2"},{"formula":"query3"},{"formula":"query4"}],"response_format":"timeseries","queries":[{"query":"sum:test_metric.increment{env:$env.value,service:$service.value}.as_count()","data_source":"metrics","name":"query2"},{"query":"sum:test_metric.gauge{env:$env.value,service:$service.value}","data_source":"metrics","name":"query3"},{"query":"sum:test_metric.set{env:$env.value,service:$service.value}","data_source":"metrics","name":"query4"}],"style":{"palette":"dog_classic","line_type":"solid","line_width":"normal"},"display_type":"line"}]},"layout":{"x":0,"y":6,"width":7,"height":4}}],"template_variables":[{"name":"env","default":"*","prefix":"env","available_values":[]},{"name":"service","default":"testapi","prefix":"service","available_values":["testapi"]}],"layout_type":"ordered","is_read_only":false,"notify_list":[],"reflow_type":"fixed","id":"35u-kpe-bah"}
+```

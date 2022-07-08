@@ -2,20 +2,26 @@ version: '3.4'
 
 services:
   app:
+    container_name: datadog-testapi
     build: .
     ports:
         - "5000:5000"
     volumes:
         - .:/code
+        - testapi-logs:/var/log
     environment:
-      - DD_SERVICE=${APP_NAME}
-      - DD_ENV=${ENV}
-      - DD_VERSION=${APP_VERSION}
-      - DD_AGENT_HOST=datadog-agent
-      - DD_APM_ENABLED=${DD_APM_ENABLED}
-      - DD_TRACE_ENABLED=${DD_TRACE_ENABLED}
+      # Flask
       - FLASK_ENV=${FLASK_ENV}
       - FLASK_DEBUG=${FLASK_DEBUG}
+
+      # Datadog
+      - DD_ENV=${ENV}
+      - DD_VERSION=${APP_VERSION}
+      - DD_SERVICE=${APP_NAME}
+      - DD_AGENT_HOST=datadog-agent
+#      - DD_APM_ENABLED=${DD_APM_ENABLED}
+#      - DD_TRACE_ENABLED=${DD_TRACE_ENABLED}
+#      - DD_LOGS_ENABLED=${DD_LOGS_ENABLED}
     depends_on:
       - datadog-agent
     stdin_open: true
@@ -31,36 +37,49 @@ services:
       - app:app
 
   datadog-agent:
+    container_name: datadog-agent
     image: gcr.io/datadoghq/agent:latest
     ports:
       - "8126:8126"
       - "8125:8125"
+    volumes:
+      # LOGGING[OPTION1]:config logging from file
+      - ./conf.yml:/etc/datadog-agent/conf.d/python.d/conf.yml:ro
+      - testapi-logs:/var/log/testapi:ro
+      # LOGGING[OPTION1]: enable for logging based on containter autodiscovery
+#      - /var/run/docker.sock:/var/run/docker.sock:ro
+#      - /proc/:/host/proc/:ro
+#      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+#      - /etc/passwd:/etc/passwd:ro
+
+    env_file:
+      - datadog.env
     environment:
-      # - DD_SERVICE=${APP_NAME}
+      - DD_SERVICE=datadog-agent
       - DD_ENV=${ENV}
       # - DD_VERSION=${APP_VERSION}
       - DD_API_KEY=${DD_API_KEY}
-      - DD_SITE=datadoghq.eu
-      - DD_APM_ENABLED=${DD_APM_ENABLED}
-      # - DD_TRACE_ENABLED=${DD_TRACE_ENABLED}
-      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=${DD_DOGSTATSD_NON_LOCAL_TRAFFIC}
-      - DD_DOGSTATSD_ORIGIN_DETECTION=${DD_DOGSTATSD_ORIGIN_DETECTION}
 
-#  locust:
-#    image: locustio/locust
-#    ports:
-#      - "8089:8089"
-#    depends_on:
-#      - app
-#      - datadog-agent
-#    volumes:
-#      - ./:/mnt/locust
-#    command: -f /mnt/locust/locustfile.py --master -H http://app:5000 --autostart
-#
-#  locust-worker:
-#    image: locustio/locust
-#    depends_on:
-#      - locust
-#    volumes:
-#      - ./:/mnt/locust
-#    command: -f /mnt/locust/locustfile.py --worker --master-host locust
+  locust:
+    container_name: datadog-locust
+    image: locustio/locust
+    ports:
+      - "8089:8089"
+    depends_on:
+      - app
+      - datadog-agent
+    volumes:
+      - ./:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --master -H http://app:5000 --autostart
+
+  locust-worker:
+    container_name: datadog-locust-worker
+    image: locustio/locust
+    depends_on:
+      - locust
+    volumes:
+      - ./:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --worker --master-host locust
+
+volumes:
+  testapi-logs:

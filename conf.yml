@@ -1,0 +1,8 @@
+# enable logging from mounted log file
+logs_enabled: true
+
+logs:
+  - type: file
+    service: testapi
+    source: python
+    path: /var/log/testapi/testapi-logs.json

@@ -38,3 +38,9 @@ class QuickstartUser(HttpUser):
     def metrics_set(self):
         new_value = randint(10, 200)
         self.client.get(f"/sdmetrics_set/{new_value}")
+
+    @task
+    def logger_route(self):
+        log_levels = ["debug", "info", "warning", "error", "critical", "exception"]
+        log_level = choice(log_levels)
+        self.client.get(f"/logging/{log_level}")
