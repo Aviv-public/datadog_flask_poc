@@ -29,3 +29,8 @@ $ curl http://localhost:5000/sdmetrics_gauge/45
 # set metric value test_metric.set (only set a value of 1 !!)
 $ curl http://localhost:5000/sdmetrics_set/78
 ```
+
+# Locust
+Using locust you can call all endpoints in batch to simulate traffic on api.
+
+Start locust batch automatically, uncomment locust and locust-worker in docker-compose file.

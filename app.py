@@ -18,9 +18,15 @@ def hello():
     return jsonify(config_json)
 
 
-@app.route("/raise")
-def raise_exception():
+@app.route("/server_error/")
+def server_error():
     raise Exception("Exception message")
+
+
+@app.route("/error_reponse/<error_code>")
+def client_error(error_code: str):
+    error_code = int(error_code)
+    return jsonify({"error": error_code}), error_code
 
 
 @app.route("/sdmetrics_incr/<count>")

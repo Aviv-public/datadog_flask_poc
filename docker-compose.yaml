@@ -45,3 +45,22 @@ services:
       # - DD_TRACE_ENABLED=${DD_TRACE_ENABLED}
       - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=${DD_DOGSTATSD_NON_LOCAL_TRAFFIC}
       - DD_DOGSTATSD_ORIGIN_DETECTION=${DD_DOGSTATSD_ORIGIN_DETECTION}
+
+#  locust:
+#    image: locustio/locust
+#    ports:
+#      - "8089:8089"
+#    depends_on:
+#      - app
+#      - datadog-agent
+#    volumes:
+#      - ./:/mnt/locust
+#    command: -f /mnt/locust/locustfile.py --master -H http://app:5000 --autostart
+#
+#  locust-worker:
+#    image: locustio/locust
+#    depends_on:
+#      - locust
+#    volumes:
+#      - ./:/mnt/locust
+#    command: -f /mnt/locust/locustfile.py --worker --master-host locust
