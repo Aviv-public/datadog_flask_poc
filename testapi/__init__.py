@@ -1,11 +1,10 @@
-import logging
 import os
 
 from ddtrace import tracer
 from flask import Flask, jsonify, current_app, request
 
-from datadog_utils.metrics_statsd import datadog_metrics
-from datadog_utils.logger import datadog_logger, DatadogLogger
+from testapi.datadog_utils.metrics_statsd import datadog_metrics
+from testapi.datadog_utils.logger import datadog_logger
 
 
 def create_app(name: str = __name__):

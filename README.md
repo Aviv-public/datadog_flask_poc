@@ -2,20 +2,19 @@
 
 # Features
 - APM enabled
-- Logging enabled
+- Trace enabled
+- Custom StatsDMetrics
+- Logging: applicaton and/or container logs
 
 # TODO
 - When Flask is not in debug mode, errors are not reported in Error Tracking (Datadog support ticket in progress)
 - StatsD Metrics:
-  - type "set" set value to 1 (instead of metric)
-  - Historgam type
+  - [ ] type "set" set value to 1 (instead of metric value)
+  - [ ] type "timer" replacement
 - Logging
-  - Application logs
-    - [x]send application logs with request info
-  - Container logs & stacktrace
-    - [x] send containter logs
-    - :error: all logs are reported as info
-    - :error: stacktraces are not grouped 
+  - Container logs
+    - :broken_heart: all logs are reported as info
+    - :broken_heart: stacktraces are not grouped 
 
 # Run application
 
@@ -76,6 +75,31 @@ $ curl http://localhost:5000/logging/error
 $ curl http://localhost:5000/logging/critical
 ```
 > View logs in https://app.datadoghq.eu/logs/livetail
+
+# Logging
+## Application logs
+The current version of application send application logs to Datadog.
+- Application explicit logs are written in a json file (see application logging with a fileHandler)
+- Json log file is mounted on datadog-agent (see datadog-agents volumes in docker-compose)
+- Datadog-agent read and send logs to Datadog website (see ./datadog-agent-python-logs-conf.yml).
+
+
+## Container logs
+Another option available is to send all application containter logs to Datadog.
+
+In datadog-agent.env
+```dotenv
+DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
+```
+
+In docker-compose
+```yaml
+      # LOGGING[OPTION2]: enable for logging based on containter autodiscovery
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+      - /etc/passwd:/etc/passwd:ro
+```
 
 # Datadog DashBoard
 ## Create a datadog dashboard

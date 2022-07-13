@@ -111,7 +111,4 @@ class DatadogMetrics:
         )
 
 
-
-
-
 datadog_metrics = DatadogMetrics()

@@ -4,12 +4,14 @@ import os
 import sys
 import typing
 
-from flask import has_request_context, request
+from flask import request
 
 
 class JsonFormatter(logging.Formatter):
     """
     Formatter that outputs JSON strings after parsing the LogRecord.
+
+    heavily inspired from https://stackoverflow.com/a/70223539
 
     @param dict fmt_dict: Key: logging format attribute pairs. Defaults to {"message": "message"}.
     @param str time_format: time.strftime() format string. Default: "%Y-%m-%dT%H:%M:%S"
@@ -59,6 +61,7 @@ class JsonFormatter(logging.Formatter):
         if record.stack_info:
             message_dict['extra_info']["stack_info"] = self.formatStack(record.stack_info)
 
+        # auto add request context
         message_dict['extra_info']["request"] = {
             "url": request.path,
             "method": request.method,
@@ -124,10 +127,6 @@ class DatadogLogger:
                 self.get_stream_handler(level=level)
             )
         return logger
-
-    @staticmethod
-    def get_extra_info(request):
-        return {'req': request.get_json()}
 
 
 datadog_logger = DatadogLogger()

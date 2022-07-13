@@ -10,18 +10,10 @@ services:
         - .:/code
         - testapi-logs:/var/log
     environment:
-      # Flask
-      - FLASK_ENV=${FLASK_ENV}
-      - FLASK_DEBUG=${FLASK_DEBUG}
-
-      # Datadog
-      - DD_ENV=${ENV}
-      - DD_VERSION=${APP_VERSION}
-      - DD_SERVICE=${APP_NAME}
       - DD_AGENT_HOST=datadog-agent
-#      - DD_APM_ENABLED=${DD_APM_ENABLED}
-#      - DD_TRACE_ENABLED=${DD_TRACE_ENABLED}
-#      - DD_LOGS_ENABLED=${DD_LOGS_ENABLED}
+    env_file:
+      - ./environment/common.env
+      - ./environment/testapi.env
     depends_on:
       - datadog-agent
     stdin_open: true
@@ -34,7 +26,7 @@ services:
       - --name="testapi"
       - --statsd-host=datadog-agent:8125
       - --bind=0.0.0.0:5000
-      - app:app
+      - testapi:app
 
   datadog-agent:
     container_name: datadog-agent
@@ -44,20 +36,20 @@ services:
       - "8125:8125"
     volumes:
       # LOGGING[OPTION1]:config logging from file
-      - ./conf.yml:/etc/datadog-agent/conf.d/python.d/conf.yml:ro
+      - ./datadog-agent-python-logs-conf.yml:/etc/datadog-agent/conf.d/python.d/conf.yml:ro
       - testapi-logs:/var/log/testapi:ro
-      # LOGGING[OPTION1]: enable for logging based on containter autodiscovery
+      # LOGGING[OPTION2]: enable for logging based on containter autodiscovery
 #      - /var/run/docker.sock:/var/run/docker.sock:ro
 #      - /proc/:/host/proc/:ro
 #      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
 #      - /etc/passwd:/etc/passwd:ro
 
     env_file:
-      - datadog.env
+      - ./environment/common.env
+      - ./environment/datadog-agent.env
     environment:
-      - DD_SERVICE=datadog-agent
-      - DD_ENV=${ENV}
-      # - DD_VERSION=${APP_VERSION}
+#      - DD_SERVICE=datadog-agent
+#      - DD_ENV=${DD_ENV}
       - DD_API_KEY=${DD_API_KEY}
 
   locust:
