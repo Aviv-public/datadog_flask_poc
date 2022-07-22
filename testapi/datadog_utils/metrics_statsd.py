@@ -23,7 +23,7 @@ class DatadogMetrics:
     def __init__(self):
         options = {
             'statsd_host': os.environ.get('DD_AGENT_HOST'),
-            # 'statsd_port': 8125,
+            'statsd_port': 8126,
         }
         datadog_initialize(**options)
         self.default_tags = {}

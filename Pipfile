@@ -1,9 +1,10 @@
 [packages]
-flask = {index = "pypi",version = ">=2.1.2,<3"}
 datadog = {index = "pypi", version = ">=0.44.0,<1"}
 ddtrace = {index = "pypi", version = ">=1.1.4,<2"}
-python-json-logger = {index = "pypi", version = ">=2.0.2,<3"}
+flask = {index = "pypi",version = ">=2.1.2,<3"}
 gunicorn = {index = "pypi", version = ">=19.7.1,<20"}
+prometheus-client = {version = ">0.10, <1", index = "pypi"}
+python-json-logger = {index = "pypi", version = ">=2.0.2,<3"}
 
 [dev-packages]
 

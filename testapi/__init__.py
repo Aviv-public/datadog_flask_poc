@@ -3,15 +3,17 @@ import os
 from ddtrace import tracer
 from flask import Flask, jsonify, current_app, request
 
+from testapi.datadog_utils.metrics_prometheus import setup_metrics, CUSTOM_PROMETHEUS_COUNT
 from testapi.datadog_utils.metrics_statsd import datadog_metrics
 from testapi.datadog_utils.logger import datadog_logger
 
 
 def create_app(name: str = __name__):
-    new_application = Flask(name)
+    new_application = Flask(os.environ.get('APP_NAME', name))
     datadog_metrics.default_tags = {
         "environment": new_application.env
     }
+    setup_metrics(new_application)
 
     return new_application
 
@@ -106,6 +108,15 @@ def logger_test(level: str):
             'extra_info': request.json,
         }
     )
+    return jsonify({})
+
+
+@app.route("/prometheus_counter_inc/<count_type>/<value>")
+def prometheus_counter_inc(count_type: str, value: str):
+    CUSTOM_PROMETHEUS_COUNT.labels(
+        type=count_type,
+        value=value,
+    ).inc()
     return jsonify({})
 
 

@@ -27,6 +27,8 @@ services:
       - --statsd-host=datadog-agent:8125
       - --bind=0.0.0.0:5000
       - testapi:app
+    networks:
+      - datadog
 
   datadog-agent:
     container_name: datadog-agent
@@ -35,8 +37,10 @@ services:
       - "8126:8126"
       - "8125:8125"
     volumes:
+      # PROMETHEUS METRICS
+      - ./agent_conf/prometheus.d/conf.yaml:/etc/datadog-agent/conf.d/openmetrics.d/conf.yaml:ro
       # LOGGING[OPTION1]:config logging from file
-      - ./datadog-agent-python-logs-conf.yml:/etc/datadog-agent/conf.d/python.d/conf.yml:ro
+      - ./agent_conf/python.d/conf.yml:/etc/datadog-agent/conf.d/python.d/conf.yml:ro
       - testapi-logs:/var/log/testapi:ro
       # LOGGING[OPTION2]: enable for logging based on containter autodiscovery
 #      - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -51,6 +55,8 @@ services:
 #      - DD_SERVICE=datadog-agent
 #      - DD_ENV=${DD_ENV}
       - DD_API_KEY=${DD_API_KEY}
+    networks:
+      - datadog
 
   locust:
     container_name: datadog-locust
@@ -63,6 +69,8 @@ services:
     volumes:
       - ./:/mnt/locust
     command: -f /mnt/locust/locustfile.py --master -H http://app:5000 --autostart
+    networks:
+      - datadog
 
   locust-worker:
     container_name: datadog-locust-worker
@@ -72,6 +80,11 @@ services:
     volumes:
       - ./:/mnt/locust
     command: -f /mnt/locust/locustfile.py --worker --master-host locust
+    networks:
+      - datadog
 
 volumes:
   testapi-logs:
+
+networks:
+  datadog:
