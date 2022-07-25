@@ -1,12 +1,14 @@
 # DATADOG Flask poc
 
 # Features
-- APM enabled
+- APM & Profiling enabled
 - Trace enabled
-- Custom StatsDMetrics
+- Metrics:
+  - Custom StatsDMetrics
+  - Prometheus (openmetrics) metrics
 - Logging: applicaton and/or container logs
 
-# TODO
+# Known Issues
 - When Flask is not in debug mode, errors are not reported in Error Tracking (Datadog support ticket in progress)
 - StatsD Metrics:
   - [ ] type "set" set value to 1 (instead of metric value)
@@ -22,70 +24,116 @@
 $ DD_API_KEY=xxx docker-compose up
 ```
 
-# Generate traffic on Application
-## Automatic (Locust)
 A locust service is automatically started on launch to generate traffic on application.
 
 View/Monitor locust run at http://localhost:8089/
 
 Disable service, comment the locust services in docker compose file.
 
-## Manual
-### Default endoint
-```bash
-$ curl http://localhost:5000/
+# How does it work?
+## Use datadog agent
+
+Run a datadog agent instance with the following env variables:
+```dotenv
+# datadog configuration
+DD_SERVICE=datadog-agent
+DD_SITE=datadoghq.eu
+DD_API_KEY=<YOUR_KEY>
+
+# application configuration
+DD_VERSION=0.1
+DD_ENV=dev
 ```
 
-### Generate HTTP 500 Error
-```bash
-$ curl http://localhost:5000/raise
+Run your flask application with the following env variables:
+```dotenv
+DD_VERSION=0.1
+DD_ENV=dev
+DD_SERVICE=testapi
+DD_AGENT_HOST=<datadog agent url>
 ```
 
-```html
-<!doctype html>
-<html lang=en>
-<title>500 Internal Server Error</title>
-<h1>Internal Server Error</h1>
-<p>The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.</p>
+Use ddtrace to run application
+```bash
+$ ddtrace-run gunicorn --name="testapi"--bind=0.0.0.0:5000 - testapi:app
 ```
+
+:bulb: See docker-compose for implementation details.
+
+
+## APM, Trace, Profiling and Error Tracking
+APM, traces, profiling and Error tracking are enabled with environment variables set in datadog-agent.
+
+```dotenv
+DD_APM_ENABLED=true
+DD_APM_NON_LOCAL_TRAFFIC=true
+DD_TRACE_ENABLED=true
+DD_TRACE_CLI_ENABLED=true
+DD_PROFILING_ENABLED=true
+DD_PROCESS_AGENT_ENABLED=true
+```
+
+- APM and profiling are reported in https://<datadog_website>/apm/services?env=dev
+- Traces are reported in https://<datadog_website>/apm/traces?query=env
+- Applications errors are reported in https://<datadog_website>/apm/error-tracking (eg. errors raised by `/server_error/` endpoint)
+  - :warning: When Flask application is run with `FLASK_DEBUG=false` errors are not reported in Error Tracking (a bug is currently under investigation w/ Datadog to fix this issue)
+
+## Statsd metrics
+Pre-requisite: Open a port on datadog agent to receive statsd metrics (see docker-compose.yaml datadog-agent ports).
+
+Add the following environent variables to datadog-agent:
+```dotenv
+DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
+DD_DOGSTATSD_ORIGIN_DETECTION=true
+```
+
+### Gunicorn Metrics with statsd
+Run Flask Application using gunicorn argument `--statsd-host=datadog-agent:<agent port>` to send gunicorn metrics to datadog-agent.
+
+:question: Impact on Datadog???
 
 ### Custom statsd Metrics
-```bash
-# increment metric test_metric.increment
-$ curl http://localhost:5000/sdmetrics_incr/3
-# decrement metric test_metric.increment
-$ curl http://localhost:5000/sdmetrics_decr/2
-# set metric value test_metric.gauge
-$ curl http://localhost:5000/sdmetrics_gauge/45
-# set metric value test_metric.set (only set a value of 1 !!)
-$ curl http://localhost:5000/sdmetrics_set/78
-```
+In Flask application:
+   - Configure application to send statsd Metrics to datadog-agent (see testapi/datadog_utils/metrics_statsd.py)
+   - Use datadog.statsd to send metrics (see `/sdmetrics...` endpoints in application)
 
-### Logging
-```bash
-# generate a debug log
-$ curl http://localhost:5000/logging/debug
-# generate a info log
-$ curl http://localhost:5000/logging/info
-# generate a warning log
-$ curl http://localhost:5000/logging/warning
-# generate a error log
-$ curl http://localhost:5000/logging/error
-# generate a critical log
-$ curl http://localhost:5000/logging/critical
-```
-> View logs in https://app.datadoghq.eu/logs/livetail
+In datadog your metrics are reported with service and env matching the DD_SERVICE and DD_ENV from environment variables.
 
-# Logging
-## Application logs
-The current version of application send application logs to Datadog.
-- Application explicit logs are written in a json file (see application logging with a fileHandler)
+
+## Prometheus (openmetrics) metrics
+1. Configure application to build and expose a /metrics endpoint (see testapi/datadog_utils/prometheus_metrics)
+  - :bulb: Example of manual metrics increment on endpoint `/prometheus_counter_inc/<count_type>/<value>`) 
+2. Configure metrics in datadog-agent to specify exhaustive list of metrics to send to datadog. See agent_conf/prometheus.d/conf.yaml
+
+Metrics can be found in datadog metrics exporer https://<datadog website>/metric/explorer. In the current application, the following metrics are generated:
+ - TESTAPI.custom_metric
+ - TESTAPI.request_count
+ - TESTAPI.request_latency_seconds
+
+Notes: `TESTAPI.` prefix comes from the datadog-agent openmetrics conf.yaml file. A service and env flag are automatically 
+added to every metrics sent by agent. (env flag is auto by defautl, service flag comes from openmetrics conf.yaml file)
+
+## Logging 
+
+View logs in https://<datadog website>/logs/livetail
+
+### Explicit Python logs
+The current version of application send application logs to Datadog. 
+:warning: This option only send logs generated explicitely in application code.
+
+- Flask Application explicit logs are written in a json file (see application logging with a fileHandler in /testapi/datadog_utils/logger)
 - Json log file is mounted on datadog-agent (see datadog-agents volumes in docker-compose)
 - Datadog-agent read and send logs to Datadog website (see ./datadog-agent-python-logs-conf.yml).
 
+Note: see in environment/datadog-agent.env the environement variables required to send logs.
+
+To test logging, see `/logging/<level>` endpoint of the provided application.
 
 ## Container logs
 Another option available is to send all application containter logs to Datadog.
+This option allow to report all logs generated by application container (including traces etc.)
+
+:bulb: To report application traces, the tracing module (see above) seem more suited than this solution.
 
 In datadog-agent.env
 ```dotenv
@@ -94,16 +142,13 @@ DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
 
 In docker-compose
 ```yaml
+      # disable OPTION1 mounts.
       # LOGGING[OPTION2]: enable for logging based on containter autodiscovery
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /proc/:/host/proc/:ro
       - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
       - /etc/passwd:/etc/passwd:ro
 ```
-
-# Datadog DashBoard
-## Create a datadog dashboard
-
-```json
-{"title":"MA - TestAPI","description":"## Title\n\nDescribe this dashboard. Add links to other dashboards, monitors, wikis,  and docs to help your teammates. Markdown is supported.\n\n- [This might link to a dashboard](#)\n- [This might link to a wiki](#)","widgets":[{"id":2404946736844091,"definition":{"title":"All Requests by Endpoint","title_size":"16","title_align":"left","show_legend":true,"legend_layout":"horizontal","legend_columns":["avg","min","max","value","sum"],"type":"timeseries","requests":[{"formulas":[{"formula":"query1"}],"response_format":"timeseries","queries":[{"query":"sum:trace.flask.request.hits{service:testapi,env:$env.value} by {resource_name}.as_count()","data_source":"metrics","name":"query1"}],"style":{"palette":"dog_classic","line_type":"solid","line_width":"normal"},"display_type":"line"}]},"layout":{"x":0,"y":0,"width":5,"height":3}},{"id":7174504803456351,"definition":{"title":"All Requests Duration by Endpoint","title_size":"16","title_align":"left","type":"toplist","requests":[{"formulas":[{"formula":"query1","limit":{"count":500,"order":"desc"}}],"response_format":"scalar","queries":[{"query":"sum:trace.flask.request.duration{env:$env.value,service:$service.value} by {resource_name}","data_source":"metrics","name":"query1","aggregator":"avg"}]}]},"layout":{"x":5,"y":0,"width":5,"height":3}},{"id":6639707856466071,"definition":{"title":"All Requests by Endpoint 2XX","title_size":"16","title_align":"left","show_legend":true,"legend_layout":"horizontal","legend_columns":["avg","min","max","value","sum"],"type":"timeseries","requests":[{"formulas":[{"formula":"query1"}],"response_format":"timeseries","queries":[{"query":"sum:trace.flask.request.hits{env:$env.value,service:$service.value,http.status_code:2*} by {resource_name,http.status_code}.as_count()","data_source":"metrics","name":"query1"}],"style":{"palette":"dog_classic","line_type":"solid","line_width":"normal"},"display_type":"line"}]},"layout":{"x":0,"y":3,"width":5,"height":3}},{"id":1511961027831519,"definition":{"title":"All Requests by Endpoint != 2XX","title_size":"16","title_align":"left","show_legend":true,"legend_layout":"horizontal","legend_columns":["avg","min","max","value","sum"],"type":"timeseries","requests":[{"formulas":[{"formula":"query1"}],"response_format":"timeseries","queries":[{"query":"sum:trace.flask.request.hits{env:$env.value,service:$service.value,!http.status_code:2*} by {resource_name,http.status_code}.as_count()","data_source":"metrics","name":"query1"}],"style":{"palette":"dog_classic","line_type":"solid","line_width":"normal"},"display_type":"line"}]},"layout":{"x":5,"y":3,"width":5,"height":3}},{"id":1759063507568562,"definition":{"title":"Custom StatsD metrics","title_size":"16","title_align":"left","show_legend":false,"legend_layout":"auto","legend_columns":["avg","min","max","value","sum"],"time":{"live_span":"15m"},"type":"timeseries","requests":[{"formulas":[{"formula":"query2"},{"formula":"query3"},{"formula":"query4"}],"response_format":"timeseries","queries":[{"query":"sum:test_metric.increment{env:$env.value,service:$service.value}.as_count()","data_source":"metrics","name":"query2"},{"query":"sum:test_metric.gauge{env:$env.value,service:$service.value}","data_source":"metrics","name":"query3"},{"query":"sum:test_metric.set{env:$env.value,service:$service.value}","data_source":"metrics","name":"query4"}],"style":{"palette":"dog_classic","line_type":"solid","line_width":"normal"},"display_type":"line"}]},"layout":{"x":0,"y":6,"width":7,"height":4}}],"template_variables":[{"name":"env","default":"*","prefix":"env","available_values":[]},{"name":"service","default":"testapi","prefix":"service","available_values":["testapi"]}],"layout_type":"ordered","is_read_only":false,"notify_list":[],"reflow_type":"fixed","id":"35u-kpe-bah"}
-```
+:warning: The following issues are encountered in this option:
+ - All logs are reported with a level=INFO
+ - Multi-line logs are not grouped (stacktraces are reported one line by one)
