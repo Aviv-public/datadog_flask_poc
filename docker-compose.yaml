@@ -47,13 +47,10 @@ services:
 #      - /proc/:/host/proc/:ro
 #      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
 #      - /etc/passwd:/etc/passwd:ro
-
     env_file:
       - ./environment/common.env
       - ./environment/datadog-agent.env
     environment:
-#      - DD_SERVICE=datadog-agent
-#      - DD_ENV=${DD_ENV}
       - DD_API_KEY=${DD_API_KEY}
     networks:
       - datadog
