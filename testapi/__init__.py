@@ -3,31 +3,19 @@ import os
 from ddtrace import tracer
 from flask import Flask, jsonify, current_app, request
 
-# from testapi.datadog_utils import ErrorFilter, setup_metrics, datadog_metrics
-from testapi.datadog_utils.metrics_prometheus import CUSTOM_PROMETHEUS_COUNT  # setup_metrics,
+from testapi.datadog_utils.metrics_prometheus import CUSTOM_PROMETHEUS_COUNT
 from testapi.datadog_utils.metrics_statsd import datadog_metrics
 from testapi.datadog_utils.logger import datadog_logger
-# from testapi.datadog_utils.trace import ErrorFilter
 from testapi.datadog_utils import init_app as init_datadog
 
 
 def create_app(name: str = __name__):
     new_application = Flask(os.environ.get('APP_NAME', name))
-    # init_datadog(app)
-    # datadog_metrics.default_tags = {
-    #     "environment": new_application.env
-    # }
-    # setup_metrics(new_application)
-
+    init_datadog(new_application)
     return new_application
 
 
 app = create_app()
-# tracer.configure(
-#     hostname=os.environ.get('DD_AGENT_HOST'),
-#     port=8126,
-#     settings={'FILTERS': [ErrorFilter()]}
-# )
 logger = datadog_logger.get_logger(name=__name__)
 
 
