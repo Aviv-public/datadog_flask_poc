@@ -9,8 +9,6 @@ services:
     volumes:
         - .:/code
         - testapi-logs:/var/log
-    environment:
-      - DD_AGENT_HOST=datadog-agent
     env_file:
       - ./environment/common.env
       - ./environment/testapi.env

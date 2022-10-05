@@ -18,7 +18,7 @@ def init_app(app: Flask) -> None:
 
     tracer.configure(
         hostname=os.environ.get('DD_AGENT_HOST'),
-        port=8126,
+        port=os.environ.get('DD_AGENT_PORT'),
         settings={'FILTERS': [ErrorFilter()]}
     )
 

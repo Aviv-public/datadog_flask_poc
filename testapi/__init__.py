@@ -98,7 +98,7 @@ def logger_test(level: str):
     logger_func(
         'logger route was executed',
         extra={
-            'extra_info': request.json,
+            'extra_info': request.data,
         }
     )
     return jsonify({})
