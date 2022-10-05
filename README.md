@@ -9,7 +9,6 @@
 - Logging: applicaton and/or container logs
 
 # Known Issues
-- When Flask is not in debug mode, errors are not reported in Error Tracking (Datadog support ticket in progress)
 - StatsD Metrics:
   - [ ] type "set" set value to 1 (instead of metric value)
   - [ ] type "timer" replacement
@@ -76,7 +75,6 @@ DD_PROCESS_AGENT_ENABLED=true
 - APM and profiling are reported in https://<datadog_website>/apm/services?env=dev
 - Traces are reported in https://<datadog_website>/apm/traces?query=env
 - Applications errors are reported in https://<datadog_website>/apm/error-tracking (eg. errors raised by `/server_error/` endpoint)
-  - :warning: When Flask application is run with `FLASK_DEBUG=false` errors are not reported in Error Tracking (a bug is currently under investigation w/ Datadog to fix this issue)
 
 ## Statsd metrics
 Pre-requisite: Open a port on datadog agent to receive statsd metrics (see docker-compose.yaml datadog-agent ports).
@@ -90,7 +88,6 @@ DD_DOGSTATSD_ORIGIN_DETECTION=true
 ### Gunicorn Metrics with statsd
 Run Flask Application using gunicorn argument `--statsd-host=datadog-agent:<agent port>` to send gunicorn metrics to datadog-agent.
 
-:question: Impact on Datadog???
 
 ### Custom statsd Metrics
 In Flask application:
@@ -105,7 +102,7 @@ In datadog your metrics are reported with service and env matching the DD_SERVIC
   - :bulb: Example of manual metrics increment on endpoint `/prometheus_counter_inc/<count_type>/<value>`) 
 2. Configure metrics in datadog-agent to specify exhaustive list of metrics to send to datadog. See agent_conf/prometheus.d/conf.yaml
 
-Metrics can be found in datadog metrics exporer https://<datadog website>/metric/explorer. In the current application, the following metrics are generated:
+Metrics can be found in datadog metrics exporter https://<datadog website>/metric/explorer. In the current application, the following metrics are generated:
  - TESTAPI.custom_metric
  - TESTAPI.request_count
  - TESTAPI.request_latency_seconds
